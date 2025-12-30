@@ -1,4 +1,4 @@
-package com.aura.assistant.common;
+package com.aura.assistant.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

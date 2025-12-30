@@ -1,24 +1,40 @@
 package com.aura.assistant.monitor;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * MonitorController 클래스
+ * 화면으로부터 모니터링 시작/중지 요청을 받는 입구 역할을 합니다.
+ */
 @RestController
-@RequestMapping("/api/monitor")
+@RequestMapping("/api/monitoring") // HTML fetch 주소와 일치하도록 수정 (monitor -> monitoring)
 @RequiredArgsConstructor
 public class MonitorController {
 
     private final MonitoringService monitoringService;
 
-    @PostMapping("/start/{id}")
-    public String start(@PathVariable Long id) {
-        monitoringService.startMonitoring(id);
-        return "모니터링이 시작되었습니다.";
+    /**
+     * 모니터링 시작 메서드
+     * @param projectId 화면에서 전달받은 프로젝트의 고유 번호
+     * @return 성공 메시지
+     */
+    @PostMapping("/start") // HTML의 /api/monitoring/start 와 맞춤
+    public ResponseEntity<String> start(@RequestParam("projectId") Long projectId) {
+        // 쿼리 파라미터(?projectId=1) 방식으로 데이터를 받습니다.
+        monitoringService.startMonitoring(projectId);
+        return ResponseEntity.ok("모니터링이 시작되었습니다.");
     }
 
-    @PostMapping("/stop/{id}")
-    public String stop(@PathVariable Long id) {
-        monitoringService.stopMonitoring(id);
-        return "모니터링이 중지되었습니다.";
+    /**
+     * 모니터링 중지 메서드
+     * @param projectId 화면에서 전달받은 프로젝트의 고유 번호
+     * @return 성공 메시지
+     */
+    @PostMapping("/stop") // HTML의 /api/monitoring/stop 과 맞춤
+    public ResponseEntity<String> stop(@RequestParam("projectId") Long projectId) {
+        monitoringService.stopMonitoring(projectId);
+        return ResponseEntity.ok("모니터링이 중지되었습니다.");
     }
 }
