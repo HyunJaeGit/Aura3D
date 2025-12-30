@@ -7,6 +7,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         th { background-color: #f4f4f4; }
+        /* 상태별 색상 클래스 */
         .status-up { color: green; font-weight: bold; }
         .status-down { color: red; font-weight: bold; }
     </style>
@@ -31,9 +32,10 @@
         <td th:text="${project.name}">네이버</td>
         <td th:text="${project.url}">https://www.naver.com</td>
         <td>
-                    <span th:text="${project.lastStatus}"
-                          th:class="${project.lastStatus == 200} ? 'status-up' : 'status-down'">
-                    </span>
+            <span th:id="'status-' + ${project.id}"
+                  th:text="${project.lastStatus}"
+                  th:class="${project.lastStatus == 200} ? 'status-up' : 'status-down'">
+            </span>
         </td>
         <td>
             <button th:onclick="'startMonitoring(' + ${project.id} + ')'">시작</button>
@@ -43,7 +45,7 @@
     </tbody>
 </table>
 
-<script>
+<script th:inline="javascript">
     /**
      * 모니터링 시작 함수
      */
@@ -54,7 +56,8 @@
         .then(response => {
             if (response.ok) {
                 alert('비서가 감시를 시작했습니다!');
-                location.reload();
+                // 시작 즉시 상태 확인을 위해 한 번 실행
+                updateRealTimeStatus(projectId);
             } else {
                 alert('가동 실패! 로그를 확인하세요.');
             }
@@ -77,6 +80,40 @@
         })
         .catch(error => console.error('Error:', error));
     }
+
+    /**
+     * 실시간 상태 업데이트 함수
+     * @param projectId 업데이트할 프로젝트의 ID
+     */
+    function updateRealTimeStatus(projectId) {
+        fetch('/api/monitoring/status?projectId=' + projectId)
+            .then(response => response.json())
+            .then(status => {
+                // HTML의 ID(status-1 등)와 매칭되는 요소를 찾습니다.
+                const statusElement = document.getElementById('status-' + projectId);
+                if (statusElement) {
+                    statusElement.innerText = status;
+
+                    // 상태값에 따라 색상 클래스를 교체합니다.
+                    if (status === 200) {
+                        statusElement.className = 'status-up';
+                    } else {
+                        statusElement.className = 'status-down';
+                    }
+                }
+            })
+            .catch(error => console.error('상태 업데이트 실패:', error));
+    }
+
+    /**
+     * 페이지 로드 시 설정
+     */
+    window.onload = function() {
+        // 프로젝트 ID가 1인 항목에 대해 30초마다 자동 업데이트 실행
+        // (추후 여러 개일 경우 반복문을 사용하도록 확장 가능)
+        setInterval(() => updateRealTimeStatus(1), 30000);
+    };
 </script>
+
 </body>
 </html>

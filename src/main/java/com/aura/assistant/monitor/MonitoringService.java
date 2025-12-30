@@ -108,4 +108,17 @@ public class MonitoringService {
 
         log.info("이력 저장 완료 - 프로젝트: {}, 상태코드: {}", project.getName(), responseCode);
     }
+
+    /**
+     * 특정 프로젝트의 가장 최근 모니터링 상태값을 가져옵니다.
+     * * @param projectId 프로젝트 ID
+     * @return 최신 상태 코드 (이력이 없으면 0 반환)
+     */
+    public int getLatestStatus(Long projectId) {
+        // 리포지토리(DB)에서 해당 프로젝트의 이력 중 가장 최근 것 하나를 가져옵니다.
+        // (이 부분은 JpaRepository의 명명 규칙이나 별도 쿼리가 필요할 수 있습니다.)
+        return monitoringHistoryRepository.findFirstByTargetProjectIdOrderByCheckedAtDesc(projectId)
+                .map(MonitoringHistory::getStatusCode)
+                .orElse(0); // 아직 체크한 기록이 없다면 0을 보냅니다.
+    }
 }

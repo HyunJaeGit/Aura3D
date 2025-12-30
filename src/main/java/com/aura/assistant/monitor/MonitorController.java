@@ -37,4 +37,19 @@ public class MonitorController {
         monitoringService.stopMonitoring(projectId);
         return ResponseEntity.ok("모니터링이 중지되었습니다.");
     }
+
+    /**
+     * 특정 프로젝트의 최신 상태 코드를 가져오는 API
+     * 주소: GET http://localhost:8080/api/monitoring/status?projectId=1
+     * * @param projectId 상태를 확인할 프로젝트 ID
+     * @return 최신 상태 코드 (예: 200, 404 등)
+     */
+    @GetMapping("/status")
+    public ResponseEntity<Integer> getLatestStatus(@RequestParam("projectId") Long projectId) {
+        // 서비스에게 최신 상태 코드가 무엇인지 물어봅니다.
+        int latestStatus = monitoringService.getLatestStatus(projectId);
+
+        // 찾은 상태 코드를 화면에 전달합니다.
+        return ResponseEntity.ok(latestStatus);
+    }
 }
