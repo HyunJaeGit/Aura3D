@@ -29,4 +29,8 @@ public class MonitoringHistory {
 
     // 체크된 시간
     private LocalDateTime checkedAt;
+
+    // 추가: 기획안 3, 5번 핵심 기능 - Gemini AI가 생성한 한 줄 조치 가이드
+    @Column(length = 500)
+    private String aiGuide;
 }

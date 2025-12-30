@@ -38,6 +38,9 @@ dependencies {
 
 	// 이 줄이 없으면 html 파일을 인식하지 못합니다.
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	// WebClient 사용
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
 }
 
 tasks.named('test') {
