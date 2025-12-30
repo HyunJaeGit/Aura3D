@@ -1,10 +1,15 @@
 package com.aura.assistant.controller;
 
+import com.aura.assistant.domain.TargetProject;
 import com.aura.assistant.domain.TargetProjectRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
  * WebController 클래스
@@ -28,4 +33,22 @@ public class WebController {
         // src/main/resources/templates/dashboard.html 파일을 찾아서 보여줍니다.
         return "dashboard";
     }
+
+    /**
+     * 프로젝트 등록 API
+     * @param name 프로젝트 이름
+     * @param url 감시할 URL
+     */
+    @PostMapping("/api/projects")
+    @ResponseBody
+    public ResponseEntity<String> addProject(@RequestParam("name") String name, @RequestParam("url") String url) {
+        TargetProject project = new TargetProject();
+        project.setName(name);
+        project.setUrl(url);
+        project.setLastStatus(0); // 초기 상태는 0
+
+        targetProjectRepository.save(project);
+        return ResponseEntity.ok("등록 성공");
+    }
+
 }

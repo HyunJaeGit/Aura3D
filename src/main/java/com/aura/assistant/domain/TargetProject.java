@@ -4,14 +4,15 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * TargetProject 엔티티
  * 감시할 서버의 이름과 주소 정보를 저장하는 클래스입니다.
  */
 @Entity
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED) // JPA를 위한 기본 생성자
+@Getter @Setter
+@NoArgsConstructor(access = AccessLevel.PUBLIC) // JPA를 위한 기본 생성자
 public class TargetProject {
 
     @Id
@@ -36,4 +37,14 @@ public class TargetProject {
     public void updateStatus(int status) {
         this.lastStatus = status;
     }
+
+    public void setName(String name) {
+    }
+
+    public void setUrl(String url) {
+    }
+
+    public void setLastStatus(int i) {
+    }
+
 }

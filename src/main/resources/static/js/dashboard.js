@@ -51,3 +51,33 @@ window.onload = function() {
     updateAllStatuses(); // 첫 실행
     setInterval(updateAllStatuses, 30000); // 30초마다 반복
 };
+
+/**
+ * 새로운 프로젝트를 등록합니다.
+ */
+function addProject() {
+    const name = document.getElementById('newName').value;
+    const url = document.getElementById('newUrl').value;
+
+    if (!name || !url) {
+        alert("이름과 URL을 모두 입력해주세요.");
+        return;
+    }
+
+    // FormData를 사용하여 데이터를 전송합니다.
+    const formData = new URLSearchParams();
+    formData.append('name', name);
+    formData.append('url', url);
+
+    fetch('/api/projects', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('새 프로젝트가 등록되었습니다!');
+            location.reload(); // 리스트 갱신을 위해 새로고침
+        }
+    })
+    .catch(error => console.error('등록 실패:', error));
+}
