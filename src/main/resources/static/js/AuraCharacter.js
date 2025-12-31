@@ -1,38 +1,44 @@
 /**
  * AuraCharacter.js
- * [역할] 상태값(status)을 받아 그에 맞는 3D 애니메이션(Idle/Alert)을 재생합니다.
+ * [클래스 역할] 상태값에 따라 GLB 모델의 애니메이션을 제어합니다.
  */
-import React, { useEffect, useRef } from 'react';
-import { useGLTF, useAnimations } from '@react-three/drei';
+(function() {
+    // CDN에서 제공하는 전역 변수에서 필요한 함수를 직접 추출합니다.
+    const { useEffect, useRef } = window.React;
+    const { useGLTF, useAnimations } = window.dreidrei;
 
-export function AuraCharacter({ status }) {
-    const group = useRef();
+    // 전역에서 접근 가능하도록 window 객체에 할당합니다 (export 대체)
+    window.AuraCharacter = function AuraCharacter({ status }) {
+        const group = useRef();
 
-    // 1. 모델과 애니메이션 정보 로드 (정상/장애 상태용 2개 로드)
-    const { nodes, materials, animations: idleAnims } = useGLTF('/assets/idle.glb');
-    const { animations: alertAnims } = useGLTF('/assets/alert.glb');
+        // 모델 로드 (경로: /static/assets/...)
+        const { nodes, animations: idleAnims } = useGLTF('/assets/idle.glb');
+        const { animations: alertAnims } = useGLTF('/assets/alert.glb');
 
-    // 2. 애니메이션 제어 도구 설정
-    const { actions } = useAnimations([...idleAnims, ...alertAnims], group);
+        // 모든 애니메이션을 합쳐서 관리합니다.
+        const { actions } = useAnimations([...idleAnims, ...alertAnims], group);
 
-    useEffect(() => {
-        // 3. 상태(status)가 200이면 idle, 아니면 alert 애니메이션 이름 선택
-        const animName = status === 200 ? idleAnims[0].name : alertAnims[0].name;
+        useEffect(() => {
+            if (!actions) return;
 
-        // 기존 동작 부드럽게 멈추고 새로운 동작 실행
-        actions[animName]?.reset().fadeIn(0.5).play();
+            // 200이면 idle, 아니면 alert 애니메이션 선택
+            const animName = status === 200 ? idleAnims[0].name : alertAnims[0].name;
 
-        return () => actions[animName]?.fadeOut(0.5);
-    }, [status, actions, idleAnims, alertAnims]);
+            if (actions[animName]) {
+                // 이전 애니메이션을 멈추고 새 애니메이션을 재생합니다.
+                Object.values(actions).forEach(action => action.fadeOut(0.5));
+                actions[animName].reset().fadeIn(0.5).play();
+            }
+        }, [status, actions]);
 
-    return (
-        <group ref={group} dispose={null} scale={[1.5, 1.5, 1.5]}>
-            {/* 믹사모에서 가져온 전체 씬을 표시합니다 */}
-            <primitive object={nodes.Scene} />
-        </group>
-    );
-}
+        return (
+            <group ref={group} dispose={null} scale={[1.5, 1.5, 1.5]}>
+                <primitive object={nodes.Scene} />
+            </group>
+        );
+    };
 
-// 성능 최적화를 위한 프리로드
-useGLTF.preload('/assets/idle.glb');
-useGLTF.preload('/assets/alert.glb');
+    // 프리로딩 설정
+    useGLTF.preload('/assets/idle.glb');
+    useGLTF.preload('/assets/alert.glb');
+})();

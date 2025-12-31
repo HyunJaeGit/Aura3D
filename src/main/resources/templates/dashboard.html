@@ -1,65 +1,56 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>Aura3D - 프로젝트 감시 비서</title>
+
+    <script type="module" crossorigin src="/dist/assets/index.js"></script>
+
+    <link rel="stylesheet" crossorigin href="/dist/assets/index.css">
+
     <link rel="stylesheet" th:href="@{/css/dashboard.css}">
 </head>
 <body>
 
-<h1>Aura3D 모니터링 대시보드</h1>
+<div class="dashboard-wrapper">
+    <header>
+        <h1>Aura3D Monitoring System</h1>
+    </header>
 
-<div id="aura-3d-container">
+    <main>
+        <section class="project-section">
+            <h2>감시 중인 프로젝트</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>프로젝트 명</th>
+                    <th>상태 (HTTP)</th>
+                    <th>관리</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="project : ${projects}">
+                    <td th:text="${project.name}">Project Name</td>
+                    <td>
+                        <span th:id="'status-' + ${project.id}" class="status-unknown">Checking...</span>
+                    </td>
+                    <td>
+                        <button th:onclick="'startMonitoring(' + ${project.id} + ')'">감시 시작</button>
+                        <button th:onclick="'stopMonitoring(' + ${project.id} + ')'">중지</button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="aura-section">
+            <h2>Aura 비서</h2>
+            <div id="root" style="width: 100%; height: 500px; background: #1a1a1a; border-radius: 15px; overflow: hidden;">
+                <p style="color: white; padding: 20px;">3D 비서를 불러오는 중입니다...</p>
+            </div>
+        </section>
+    </main>
 </div>
 
-<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<script type="text/babel" src="/js/AuraCharacter.js"></script>
-<script type="text/babel" src="/js/DashboardView.js"></script>
-
-<script type="text/babel">
-    const container = document.getElementById('aura-3d-container');
-    const root = ReactDOM.createRoot(container);
-    root.render(<DashboardView />);
-</script>
-
-<div class="add-project-form">
-    <input type="text" id="newName" placeholder="프로젝트 이름 (예: 구글)">
-    <input type="text" id="newUrl" placeholder="URL (예: https://www.google.com)">
-    <button onclick="addProject()">프로젝트 추가</button>
-</div>
-
-<table>
-    <thead>
-    <tr>
-        <th>ID</th>
-        <th>프로젝트 이름</th>
-        <th>URL</th>
-        <th>마지막 상태</th>
-        <th>작업</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="project : ${projects}">
-        <td th:text="${project.id}">1</td>
-        <td th:text="${project.name}">네이버</td>
-        <td th:text="${project.url}">https://www.naver.com</td>
-        <td>
-            <span th:id="'status-' + ${project.id}"
-                  th:text="${project.lastStatus}"
-                  th:class="${project.lastStatus == 200} ? 'status-up' : 'status-down'">
-            </span>
-        </td>
-        <td>
-            <button th:onclick="'startMonitoring(' + ${project.id} + ')'">시작</button>
-            <button th:onclick="'stopMonitoring(' + ${project.id} + ')'">중지</button>
-        </td>
-    </tr>
-    </tbody>
-</table>
-
-<script th:src="@{/js/dashboard.js}"></script>
 </body>
 </html>
