@@ -1,22 +1,28 @@
 /**
- * Monitor.js
+ * dashboard.js
  * 모니터링 대시보드의 실시간 통신을 담당하는 스크립트입니다.
  */
 
 // 모든 프로젝트의 상태를 일괄 업데이트하는 함수
 function updateAllStatuses() {
-    // id가 "status-"로 시작하는 모든 span 태그를 찾습니다.
     const statusElements = document.querySelectorAll('[id^="status-"]');
 
     statusElements.forEach(el => {
-        const projectId = el.id.split('-')[1]; // id에서 숫자 추출
+        const projectId = el.id.split('-')[1];
 
         fetch('/api/monitoring/status?projectId=' + projectId)
             .then(response => response.json())
             .then(status => {
                 el.innerText = status;
-                // 상태 코드에 따른 클래스(색상) 교체
                 el.className = (status === 200) ? 'status-up' : 'status-down';
+
+                // ==========================================
+                // [수정 포인트] 3D 캐릭터에게 상태 전달
+                // 전역 변수 window.currentAuraStatus에 상태를 저장하여
+                // 나중에 구현할 React 3D 컴포넌트가 이 값을 감시하게 합니다.
+                // ==========================================
+                window.currentAuraStatus = status;
+                // ==========================================
             })
             .catch(error => console.error('상태 확인 실패(ID:' + projectId + '):', error));
     });
