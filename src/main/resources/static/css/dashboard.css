@@ -3,6 +3,11 @@
  * 대시보드의 레이아웃과 상태별 색상을 정의합니다.
  */
 
+.dashboard-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
 /* 테이블 기본 스타일 */
 table {
     width: 100%;
