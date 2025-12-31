@@ -9,6 +9,22 @@
 
 <h1>Aura3D 모니터링 대시보드</h1>
 
+<div id="aura-3d-container">
+</div>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel" src="/js/AuraCharacter.js"></script>
+<script type="text/babel" src="/js/DashboardView.js"></script>
+
+<script type="text/babel">
+    const container = document.getElementById('aura-3d-container');
+    const root = ReactDOM.createRoot(container);
+    root.render(<DashboardView />);
+</script>
+
 <div class="add-project-form">
     <input type="text" id="newName" placeholder="프로젝트 이름 (예: 구글)">
     <input type="text" id="newUrl" placeholder="URL (예: https://www.google.com)">
