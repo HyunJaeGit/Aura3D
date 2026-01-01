@@ -12,47 +12,6 @@
 
 </head>
 <body>
-
-<div class="dashboard-wrapper">
-    <header>
-        <h1>Aura3D Monitoring System</h1>
-    </header>
-
-    <main>
-        <!-- 3D AI 비서 출력 -->
-        <section class="aura-section">
-            <h2>Aura 비서</h2>
-            <div id="root" style="width: 100%; height: 500px; background: #1a1a1a; border-radius: 15px; overflow: hidden;">
-                <p style="color: white; padding: 20px;">3D 비서를 불러오는 중입니다...</p>
-            </div>
-        </section>
-
-        <section class="project-section">
-            <h2>감시 중인 프로젝트</h2>
-            <table>
-                <thead>
-                <tr>
-                    <th>프로젝트 명</th>
-                    <th>상태 (HTTP)</th>
-                    <th>관리</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="project : ${projects}">
-                    <td th:text="${project.name}">Project Name</td>
-                    <td>
-                        <span th:id="'status-' + ${project.id}" class="status-unknown">Checking...</span>
-                    </td>
-                    <td>
-                        <button th:onclick="'startMonitoring(' + ${project.id} + ')'">감시 시작</button>
-                        <button th:onclick="'stopMonitoring(' + ${project.id} + ')'">중지</button>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </section>
-    </main>
-</div>
-
+    <div id="root"></div>
 </body>
 </html>
