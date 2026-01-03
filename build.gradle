@@ -36,10 +36,15 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-	// 이 줄이 없으면 html 파일을 인식하지 못합니다.
+	// 이 줄이 없으면 html 파일을 인식하지 못함
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	// WebClient 사용
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+	// JWT 토큰 사용
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
 }
 
