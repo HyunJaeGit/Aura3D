@@ -1,15 +1,19 @@
 package com.aura.assistant.monitor;
 
+import com.aura.assistant.domain.MonitoringHistory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * MonitorController 클래스
- * 화면으로부터 모니터링 시작/중지 요청을 받는 입구 역할을 합니다.
+ * 모니터링 컨트롤러: 상태 코드와 Gemini AI 가이드를 함께 반환하도록 고도화되었습니다.
  */
 @RestController
-@RequestMapping("/api/monitoring") // HTML fetch 주소와 일치하도록 수정 (monitor -> monitoring)
+@RequestMapping("/api/monitoring")
 @RequiredArgsConstructor
 public class MonitorController {
 
@@ -17,52 +21,49 @@ public class MonitorController {
 
     /**
      * 모니터링 시작 메서드
-     * @param projectId 화면에서 전달받은 프로젝트의 고유 번호
-     * @return 성공 메시지
      */
-    @PostMapping("/start") // HTML의 /api/monitoring/start 와 맞춤
+    @PostMapping("/start")
     public ResponseEntity<String> start(@RequestParam("projectId") Long projectId) {
-        // 쿼리 파라미터(?projectId=1) 방식으로 데이터를 받습니다.
         monitoringService.startMonitoring(projectId);
         return ResponseEntity.ok("모니터링이 시작되었습니다.");
     }
 
     /**
      * 모니터링 중지 메서드
-     * @param projectId 화면에서 전달받은 프로젝트의 고유 번호
-     * @return 성공 메시지
      */
-    @PostMapping("/stop") // HTML의 /api/monitoring/stop 과 맞춤
+    @PostMapping("/stop")
     public ResponseEntity<String> stop(@RequestParam("projectId") Long projectId) {
         monitoringService.stopMonitoring(projectId);
         return ResponseEntity.ok("모니터링이 중지되었습니다.");
     }
 
     /**
-     * 특정 프로젝트의 최신 상태 코드를 가져오는 API
-     * 주소: GET http://localhost:8080/api/monitoring/status?projectId=1
-     * * @param projectId 상태를 확인할 프로젝트 ID
-     * @return 최신 상태 코드 (예: 200, 404 등)
+     * 특정 프로젝트의 최신 데이터(상태 + AI가이드)를 가져오는 API
+     * 리액트에서 최초 접속 시, 수동 클릭 시, 주기적 체크 시 호출됩니다.
      */
     @GetMapping("/status")
-    public ResponseEntity<Integer> getLatestStatus(@RequestParam("projectId") Long projectId) {
-        // 서비스에게 최신 상태 코드가 무엇인지 물어봅니다.
-        int latestStatus = monitoringService.getLatestStatus(projectId);
+    public ResponseEntity<Map<String, Object>> getLatestStatus(@RequestParam("projectId") Long projectId) {
+        Map<String, Object> response = new HashMap<>();
 
-        // 찾은 상태 코드를 화면에 전달합니다.
-        return ResponseEntity.ok(latestStatus);
-    }
-
-/*
-    // 500 에러 테스트용 코드
-    @GetMapping("/status")
-    public ResponseEntity<Integer> getLatestStatus(@RequestParam("projectId") Long projectId) {
-        // 테스트용: 1번 프로젝트면 무조건 장애(500) 발생 시뮬레이션
+        // [테스트 시뮬레이션] 1번 프로젝트면 강제로 500 에러와 가짜 가이드를 반환해봅니다.
+        // 실제 운영 시에는 이 if문을 주석 처리하고 아래 서비스 호출 로직을 사용합니다.
         if (projectId == 1) {
-            return ResponseEntity.ok(500);
+            response.put("status", 500);
+            response.put("aiGuide", "서버 응답 속도가 지연되고 있습니다. Gemini 분석 결과: 메모리 부족이 의심됩니다.");
+            return ResponseEntity.ok(response);
         }
-        return ResponseEntity.ok(monitoringService.getLatestStatus(projectId));
-    }
-*/
 
+        // 실제 서비스 로직: DB에서 가장 최신 이력을 가져옴
+        MonitoringHistory latest = monitoringService.getLatestHistory(projectId);
+
+        if (latest != null) {
+            response.put("status", latest.getStatusCode());
+            response.put("aiGuide", latest.getAiGuide());
+        } else {
+            response.put("status", 200);
+            response.put("aiGuide", null);
+        }
+
+        return ResponseEntity.ok(response);
+    }
 }

@@ -127,4 +127,11 @@ public class MonitoringService {
                 .map(MonitoringHistory::getStatusCode)
                 .orElse(0); // 기록이 없으면 0 반환
     }
+
+    // TO-BE: 이력 창고(MonitoringHistoryRepository)에서 최신 데이터를 가져옴
+    public MonitoringHistory getLatestHistory(Long projectId) {
+        return monitoringHistoryRepository.findFirstByTargetProjectIdOrderByCheckedAtDesc(projectId)
+                .orElse(null);
+    }
+
 }
