@@ -9,8 +9,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * MonitorController 클래스
- * 모니터링 컨트롤러: 상태 코드와 Gemini AI 가이드를 함께 반환하도록 고도화되었습니다.
+ * [MonitorController]
+ * 역할: 리액트 프론트엔드와 소통하는 창구입니다.
+ * 리액트에서 "지금 상태 어때?"라고 물어보면 DB에서 최신 정보를 꺼내 대답해줍니다.
  */
 @RestController
 @RequestMapping("/api/monitoring")
@@ -20,7 +21,7 @@ public class MonitorController {
     private final MonitoringService monitoringService;
 
     /**
-     * 모니터링 시작 메서드
+     * 모니터링 시작: 특정 프로젝트의 감시 스케줄러를 가동합니다.
      */
     @PostMapping("/start")
     public ResponseEntity<String> start(@RequestParam("projectId") Long projectId) {
@@ -29,7 +30,7 @@ public class MonitorController {
     }
 
     /**
-     * 모니터링 중지 메서드
+     * 모니터링 중지: 진행 중인 감시 작업을 멈춥니다.
      */
     @PostMapping("/stop")
     public ResponseEntity<String> stop(@RequestParam("projectId") Long projectId) {
@@ -38,30 +39,24 @@ public class MonitorController {
     }
 
     /**
-     * 특정 프로젝트의 최신 데이터(상태 + AI가이드)를 가져오는 API
-     * 리액트에서 최초 접속 시, 수동 클릭 시, 주기적 체크 시 호출됩니다.
+     * 특정 프로젝트의 최신 데이터(DB 값)를 반환합니다.
+     * 이제 더 이상 가짜 500 에러를 보내지 않고, 실제 모니터링 결과를 보냅니다.
      */
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getLatestStatus(@RequestParam("projectId") Long projectId) {
         Map<String, Object> response = new HashMap<>();
 
-        // [테스트 시뮬레이션] 1번 프로젝트면 강제로 500 에러와 가짜 가이드를 반환해봅니다.
-        // 실제 운영 시에는 이 if문을 주석 처리하고 아래 서비스 호출 로직을 사용합니다.
-        if (projectId == 1) {
-            response.put("status", 500);
-            response.put("aiGuide", "서버 응답 속도가 지연되고 있습니다. Gemini 분석 결과: 메모리 부족이 의심됩니다.");
-            return ResponseEntity.ok(response);
-        }
-
-        // 실제 서비스 로직: DB에서 가장 최신 이력을 가져옴
+        // 1. 서비스 클래스를 통해 DB에서 해당 프로젝트의 가장 최근 기록을 가져옵니다.
         MonitoringHistory latest = monitoringService.getLatestHistory(projectId);
 
+        // 2. 기록이 존재한다면 실제 상태코드와 AI 가이드를 응답에 담습니다.
         if (latest != null) {
             response.put("status", latest.getStatusCode());
             response.put("aiGuide", latest.getAiGuide());
         } else {
+            // 아직 한 번도 체크된 적이 없다면 기본 정상 상태를 반환합니다.
             response.put("status", 200);
-            response.put("aiGuide", null);
+            response.put("aiGuide", "데이터를 수집 중입니다. 잠시만 기다려주세요.");
         }
 
         return ResponseEntity.ok(response);
