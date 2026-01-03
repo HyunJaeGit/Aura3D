@@ -127,10 +127,12 @@ public class MonitoringService {
     }
 
     /**
-     * 리액트 화면에 보여줄 최신 상태 정보를 조회합니다.
+        리액트 화면에 보여줄 최신 상태 정보를 조회합니다.
      */
     public MonitoringHistory getLatestHistory(Long projectId) {
         return monitoringHistoryRepository.findFirstByTargetProjectIdOrderByCheckedAtDesc(projectId)
                 .orElse(null);
     }
+
+
 }
