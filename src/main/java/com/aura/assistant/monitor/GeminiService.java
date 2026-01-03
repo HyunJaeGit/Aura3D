@@ -13,14 +13,16 @@ import java.util.Map;
  */
 @Service
 public class GeminiService {
+
     @Value("${google.ai.gemini.api-key}")
     private String apiKey;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     public String getAiGuide(int statusCode) {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 
-        // 상태에 따른 프롬프트 분기
+        // [기획 반영] 상태별 맞춤 프롬프트 설정
         String prompt = (statusCode == 200)
                 ? "현재 시스템은 매우 정상이야. 관리자에게 비서처럼 기분 좋은 인사와 시스템이 안정적이라는 브리핑을 한 줄로 해줘. 한국어로 40자 이내."
                 : "서버 상태가 " + statusCode + " 에러야. 개발자가 할 조치사항을 전문 비서처럼 한 줄로 한국어로 알려줘. 50자 이내.";
@@ -30,19 +32,23 @@ public class GeminiService {
         );
 
         try {
+            @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(url, requestBody, Map.class);
             return extractText(response);
         } catch (Exception e) {
-            return "AI 분석 일시 불가: " + e.getMessage();
+            return "AI 서비스 연결 일시 불가: " + e.getMessage();
         }
     }
 
+    @SuppressWarnings("unchecked")
     private String extractText(Map<String, Object> response) {
         try {
             List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
-            Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+            Map<String, Object> content = (Map<String, Object>) candidates.getFirst().get("content");
             List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-            return (String) parts.get(0).get("text");
-        } catch (Exception e) { return "가이드 생성 오류"; }
+            return (String) parts.getFirst().get("text");
+        } catch (Exception e) {
+            return "가이드 분석 중 오류 발생";
+        }
     }
 }
