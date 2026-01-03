@@ -1,52 +1,37 @@
-HELP.md
-.gradle
-build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
+# ==============================================================================
+# Aura3D 프로젝트 통합 (Root용)
+# 윈도우 환경 및 IntelliJ, Java/React 통합 관리용
+# ==============================================================================
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
-
-### IntelliJ IDEA ###
-.idea
+# [1. IDE 및 OS 관련 설정 - Windows 중심]
+.idea/
 *.iws
 *.iml
 *.ipr
 out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-
-### VS Code ###
 .vscode/
+bin/
+.DS_Store
+Thumbs.db
 
+# [2. 백엔드 관련 (Java 21 / Gradle)]
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
 
-# 컴파일 결과물
-/build/
-/out/
+# [3. 프론트엔드 관련 (React / Vite / Node.js)]
+# 어느 위치에 있든 node_modules 폴더 전체를 제외
+**/node_modules/
+# 프론트엔드 빌드 결과물 및 로그를 제외
+frontend/dist/
+frontend/build/
+*.log
+npm-debug.log*
 
-# 설정 및 비밀 정보
+# [4. 설정 및 비밀 정보 관련]
 .env
-application.yml
-*.properties
-
-# IDE 설정 파일
-.idea/
-*.iml
-.vscode/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+application.yaml
