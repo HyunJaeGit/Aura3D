@@ -44,6 +44,7 @@ public class MonitorController {
      * * @param projectId 상태를 확인할 프로젝트 ID
      * @return 최신 상태 코드 (예: 200, 404 등)
      */
+    /*
     @GetMapping("/status")
     public ResponseEntity<Integer> getLatestStatus(@RequestParam("projectId") Long projectId) {
         // 서비스에게 최신 상태 코드가 무엇인지 물어봅니다.
@@ -52,4 +53,16 @@ public class MonitorController {
         // 찾은 상태 코드를 화면에 전달합니다.
         return ResponseEntity.ok(latestStatus);
     }
+     */
+    // 500 에러 테스트용 코드
+    @GetMapping("/status")
+    public ResponseEntity<Integer> getLatestStatus(@RequestParam("projectId") Long projectId) {
+        // 테스트용: 1번 프로젝트면 무조건 장애(500) 발생 시뮬레이션
+        if (projectId == 1) {
+            return ResponseEntity.ok(500);
+        }
+        return ResponseEntity.ok(monitoringService.getLatestStatus(projectId));
+    }
+
+
 }
