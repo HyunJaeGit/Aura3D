@@ -19,6 +19,17 @@ import java.util.Map;
 public class MonitorController {
 
     private final MonitoringService monitoringService;
+    private final GeminiService geminiService; // GeminiService 주입 추가
+
+    /**
+     * [추가] 대시보드 첫 진입 시 AI 환영 인사를 가져옵니다.
+     */
+    @GetMapping("/welcome")
+    public ResponseEntity<String> getWelcome(@RequestParam("userName") String userName) {
+        // GeminiService를 직접 호출하여 실시간 인사말을 생성합니다.
+        String greeting = geminiService.getWelcomeGreeting(userName);
+        return ResponseEntity.ok(greeting);
+    }
 
     /**
      * 모니터링 시작: 특정 프로젝트의 감시 스케줄러를 가동합니다.

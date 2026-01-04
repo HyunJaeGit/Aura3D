@@ -19,6 +19,32 @@ public class GeminiService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    /**
+     * [추가] 사용자가 대시보드에 처음 진입했을 때 보여줄 환영 인사를 생성합니다.
+     */
+    public String getWelcomeGreeting(String userName) {
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+
+        // 프롬프트에 'userName'을 넣어 개인화된 느낌을 줍니다.
+        String prompt = String.format(
+                "관리자 %s님이 Aura3D 시스템 관제 센터에 로그인했어. " +
+                        "전문적이고 든든한 AI 비서로서 짧고 정중한 환영 인사와 시스템 감시를 시작할 준비가 되었다는 메시지를 한 줄로 해줘. " +
+                        "한국어로 40자 이내.", userName);
+
+        Map<String, Object> requestBody = Map.of(
+                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt))))
+        );
+
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restTemplate.postForObject(url, requestBody, Map.class);
+            return extractText(response);
+        } catch (Exception e) {
+            return "접속을 환영합니다. 시스템 상태를 확인 중입니다.";
+        }
+    }
+
+
     public String getAiGuide(int statusCode) {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 

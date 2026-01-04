@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom'
 function AuraModel({ status }) {
   const group = useRef()
 
-  // 1. 상태에 따른 모델 경로 결정
+  // 1. 상태에 따른 모델 경로 결정 (정상: idle, 장애: alert)
   const modelPath = status === 200 ? '/models/idle.glb' : '/models/alert.glb'
   const { scene, animations } = useGLTF(modelPath)
   const { actions } = useAnimations(animations, group)
@@ -23,7 +23,7 @@ function AuraModel({ status }) {
         firstAction.reset().fadeIn(0.5).play()
       }
     }
-    // 3. 클린업: 모델이 바뀔 때 이전 애니메이션을 페이드아웃
+    // 3. 클린업: 모델이 바뀔 때 이전 애니메이션을 페이드아웃하여 부드러운 전환 유도
     return () => {
       if (actions) {
         Object.values(actions).forEach(action => action?.fadeOut(0.5))
@@ -33,7 +33,6 @@ function AuraModel({ status }) {
 
   return (
     <group ref={group} dispose={null}>
-      {/* 3D 모델의 크기와 지면 위 위치 설정 */}
       <primitive object={scene} scale={2.8} position={[0, -2.5, 0]} />
     </group>
   )
@@ -46,14 +45,15 @@ function AuraModel({ status }) {
 const Dashboard = () => {
   const navigate = useNavigate()
 
-  // 상태 관리: 서버 상태(status)와 AI 분석 가이드(aiGuide)
+  // --- [상태 관리] ---
   const [monitorData, setMonitorData] = useState({ status: 200, aiGuide: "" })
   const [loading, setLoading] = useState(false)
   const projectId = 1 // 타겟 프로젝트 식별자
+  const userName = localStorage.getItem('userName') || '관리자'
 
   /**
-   * [보안 가드]
-   * 역할: 로컬 스토리지에 인증 토큰이 없으면 즉시 로그인 페이지로 쫓아냅니다.
+   * [1. 보안 가드]
+   * 역할: 로컬 스토리지에 인증 토큰이 없으면 즉시 로그인 페이지로 이동시킵니다.
    */
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -64,8 +64,25 @@ const Dashboard = () => {
   }, [navigate])
 
   /**
-   * [실시간 상태 동기화]
-   * 역할: 백엔드 API로부터 최신 서버 상태와 AI 가이드 메시지를 수신합니다.
+   * [2. AI 환영 인사 요청]
+   * 역할: 대시보드 진입 시 Gemini에게 실시간 환영 인사를 생성하도록 요청합니다.
+   */
+  const fetchGreeting = async () => {
+    try {
+      const response = await fetch(`/api/monitoring/welcome?userName=${userName}`)
+      if (response.ok) {
+        const text = await response.text()
+        // 기존 상태는 유지하고 aiGuide만 인사말로 업데이트
+        setMonitorData(prev => ({ ...prev, aiGuide: text }))
+      }
+    } catch (error) {
+      console.error("인사말 로드 실패:", error)
+    }
+  }
+
+  /**
+   * [3. 실시간 상태 동기화 (Polling)]
+   * 역할: 백엔드 API로부터 최신 서버 상태와 모니터링 기록을 수신합니다.
    */
   const updateStatus = async () => {
     setLoading(true)
@@ -75,40 +92,54 @@ const Dashboard = () => {
 
       const data = await response.json()
 
-      // 성능 최적화: 데이터가 실제로 변했을 때만 상태를 업데이트합니다.
-      if (data.status !== monitorData.status || data.aiGuide !== monitorData.aiGuide) {
-        setMonitorData(data)
-      }
+      // 데이터가 실제로 변했을 때만 업데이트하여 불필요한 리렌더링 방지
+      setMonitorData(prev => ({
+        status: data.status,
+        // 서버에서 온 가이드가 있으면 그것을 보여주고, 없으면 기존(인사말 등)을 유지
+        aiGuide: data.aiGuide || prev.aiGuide
+      }))
     } catch (error) {
       console.error('상태 업데이트 실패:', error)
-      setMonitorData({
+      setMonitorData(prev => ({
+        ...prev,
         status: 500,
         aiGuide: "시스템 연결 실패. 백엔드 서버와의 연결을 확인하세요."
-      })
+      }))
     } finally {
       setLoading(false)
     }
   }
 
-  // 컴포넌트 마운트 시 최초 실행 및 30초마다 자동 갱신(Polling)
+  /**
+   * [4. 컴포넌트 생명주기 제어]
+   * 역할: 마운트 시 인사말과 상태를 즉시 가져오고 30초 주기로 갱신합니다.
+   */
   useEffect(() => {
-    updateStatus()
+    fetchGreeting() // 첫 진입 인사말
+    updateStatus()  // 현재 상태 체크
+
     const timer = setInterval(updateStatus, 30000)
     return () => clearInterval(timer)
   }, [])
 
-  // 서비스 제어 핸들러 (시작/중지)
+  // --- [서비스 제어 핸들러] ---
   const handleStart = async () => {
     try {
       const res = await fetch(`/api/monitoring/start?projectId=${projectId}`, { method: 'POST' })
-      if (res.ok) { alert("모니터링 시스템을 가동합니다."); updateStatus(); }
+      if (res.ok) {
+        alert("모니터링 시스템을 가동합니다.")
+        updateStatus()
+      }
     } catch (err) { console.error(err) }
   }
 
   const handleStop = async () => {
     try {
       const res = await fetch(`/api/monitoring/stop?projectId=${projectId}`, { method: 'POST' })
-      if (res.ok) { alert("모니터링 시스템을 중단합니다."); updateStatus(); }
+      if (res.ok) {
+        alert("모니터링 시스템을 중단합니다.")
+        updateStatus()
+      }
     } catch (err) { console.error(err) }
   }
 
@@ -140,20 +171,15 @@ const Dashboard = () => {
         {/* --- 3. 3D 시각화 영역 (Canvas) --- */}
         <section style={{ flex: 1.2, position: 'relative', overflow: 'hidden' }}>
           <Canvas camera={{ position: [0, 0, 8], fov: 35 }} gl={{ alpha: true }}>
-
-            {/* 배경 이미지와 어울리는 은은한 바닥 격자 (결정 필요 시 삭제 가능) */}
             <gridHelper args={[30, 60, '#004466', '#050505']} position={[0, -2.51, 0]} />
-
             <ambientLight intensity={2.5} />
             <Environment preset="city" />
 
             <Suspense fallback={null}>
               <AuraModel status={monitorData.status} />
-              {/* 바닥 그림자 설정 */}
               <ContactShadows opacity={0.2} scale={12} blur={3} far={5} />
             </Suspense>
 
-            {/* 줌과 화면 이동을 차단하여 UI 몰입도를 높입니다. */}
             <OrbitControls
                 makeDefault
                 enableZoom={false}
@@ -186,68 +212,36 @@ const Dashboard = () => {
   )
 }
 
-/** --- 인라인 스타일 가이드 --- **/
-
-// bg.png를 배경으로 설정하고 스크롤 없는 전체 레이아웃 구성
+// --- [스타일 가이드] ---
 const containerStyle = {
-    width: '100%',
-    maxWidth: '1000px',
-    height: '90vh',
-    margin: '20px auto',
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    boxShadow: '0 0 100px rgba(0,0,0,0.8)',
-    backgroundImage: "url('/images/bg.png')", // 배경 이미지 경로
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundColor: '#0a0a0b',
-    borderRadius: '8px',
-    overflow: 'hidden'
+    width: '100%', maxWidth: '1000px', height: '90vh', margin: '20px auto',
+    position: 'relative', display: 'flex', flexDirection: 'column',
+    boxShadow: '0 0 100px rgba(0,0,0,0.8)', backgroundImage: "url('/images/bg.png')",
+    backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#0a0a0b',
+    borderRadius: '8px', overflow: 'hidden'
 };
 
 const footerStyle = {
-    flex: 0.8,
-    padding: '40px 50px',
-    background: 'rgba(5, 5, 5, 0.85)',
-    backdropFilter: 'blur(10px)',
-    borderTop: '1px solid rgba(255,255,255,0.05)',
-    zIndex: 10
+    flex: 0.8, padding: '40px 50px', background: 'rgba(5, 5, 5, 0.85)',
+    backdropFilter: 'blur(10px)', borderTop: '1px solid rgba(255,255,255,0.05)', zIndex: 10
 };
 
 const btnStyle = (color) => ({
-    background: 'none',
-    color: color,
-    border: `1px solid ${color}`,
-    padding: '8px 20px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '0.75rem',
-    marginRight: '10px',
-    fontWeight: 'bold',
-    transition: '0.2s'
+    background: 'none', color: color, border: `1px solid ${color}`,
+    padding: '8px 20px', borderRadius: '4px', cursor: 'pointer',
+    fontSize: '0.75rem', marginRight: '10px', fontWeight: 'bold', transition: '0.2s'
 });
 
 const bubbleStyle = {
-    position: 'absolute',
-    top: '100px',
-    right: '60px',
-    width: '260px',
-    padding: '20px',
-    background: 'rgba(15, 15, 20, 0.95)',
-    border: '1px solid rgba(0, 212, 255, 0.4)',
-    borderRadius: '15px',
-    zIndex: 100,
-    backdropFilter: 'blur(8px)',
+    position: 'absolute', top: '100px', right: '60px', width: '260px', padding: '20px',
+    background: 'rgba(15, 15, 20, 0.95)', border: '1px solid rgba(0, 212, 255, 0.4)',
+    borderRadius: '15px', zIndex: 100, backdropFilter: 'blur(8px)',
     boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
 };
 
 const bubbleTailStyle = {
-    position: 'absolute',
-    left: '-10px',
-    top: '30px',
-    borderTop: '10px solid transparent',
-    borderBottom: '10px solid transparent',
+    position: 'absolute', left: '-10px', top: '30px',
+    borderTop: '10px solid transparent', borderBottom: '10px solid transparent',
     borderRight: '10px solid rgba(0, 212, 255, 0.4)'
 };
 
