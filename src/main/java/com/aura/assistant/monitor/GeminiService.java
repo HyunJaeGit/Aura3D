@@ -25,8 +25,8 @@ public class GeminiService {
      * MonitoringService의 getAiAnalysis에서 이 메서드를 호출하게 됩니다.
      */
     public String getCompletion(String prompt) {
-        // 모델명 앞에 'models/'를 추가하고 v1 버전을 사용합니다.
-        String url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+        // 모델명 앞에 'models/'를 명시하고 세부 버전까지 포함한 전체 경로를 사용합니다.
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey;
 
         Map<String, Object> requestBody = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt))))
