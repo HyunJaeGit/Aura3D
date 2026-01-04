@@ -6,7 +6,6 @@ import axios from 'axios';
 
 /**
  * [AuraModel 컴포넌트]
- * 역할: 시스템 상태(status)에 따라 3D 모델과 애니메이션을 교체합니다.
  */
 function AuraModel({ status }) {
   const group = useRef();
@@ -43,6 +42,7 @@ const Dashboard = () => {
   const [newProject, setNewProject] = useState({ name: '', url: '' });
   const [monitorData, setMonitorData] = useState({ status: 200, aiGuide: "" });
   const [loading, setLoading] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState(null); // 추가: 선택된 프로젝트 관리
   const userName = localStorage.getItem('userName') || '관리자';
 
   /**
@@ -52,8 +52,6 @@ const Dashboard = () => {
     try {
       const response = await axios.get('/api/projects/list');
       setProjects(response.data);
-
-      // 리스트 중 하나라도 에러(200도 아니고 대기중0도 아님)가 있으면 전체 상태 500 처리
       const hasError = response.data.some(p => p.lastStatus !== 200 && p.lastStatus !== 0);
       setMonitorData(prev => ({ ...prev, status: hasError ? 500 : 200 }));
     } catch (error) {
@@ -74,6 +72,21 @@ const Dashboard = () => {
   };
 
   /**
+   * [추가 기능: 특정 프로젝트 AI 분석 가이드 요청]
+   */
+  const handleProjectClick = async (project) => {
+    setSelectedProjectId(project.id);
+    try {
+      // 백엔드의 새로운 분석 엔드포인트 호출
+      const response = await axios.get(`/api/monitoring/analyze?projectId=${project.id}`);
+      setMonitorData(prev => ({ ...prev, aiGuide: response.data }));
+    } catch (error) {
+      console.error("분석 실패:", error);
+      setMonitorData(prev => ({ ...prev, aiGuide: "분석 데이터를 가져오지 못했습니다." }));
+    }
+  };
+
+  /**
    * [3. 신규 프로젝트 등록]
    */
   const handleAddProject = async (e) => {
@@ -82,7 +95,6 @@ const Dashboard = () => {
       alert("이름과 URL을 모두 입력해주세요.");
       return;
     }
-
     try {
       await axios.post('/api/projects/add', newProject);
       alert("성공적으로 등록되었습니다!");
@@ -94,13 +106,11 @@ const Dashboard = () => {
   };
 
   /**
-   * [4. 감시 제어 (시작/중지)]
-   * 각각의 프로젝트 ID별로 감시를 켜거나 끕니다.
+   * [4. 감시 제어]
    */
   const handleToggleService = async (id, action) => {
     setLoading(true);
     try {
-      // action: 'start' 또는 'stop'
       const res = await axios.post(`/api/monitoring/${action}?projectId=${id}`);
       if (res.status === 200) {
         alert(`프로젝트 #${id} 감시를 ${action === 'start' ? '시작' : '중단'}합니다.`);
@@ -135,7 +145,6 @@ const Dashboard = () => {
     }
     fetchGreeting();
     fetchProjects();
-
     const timer = setInterval(fetchProjects, 10000);
     return () => clearInterval(timer);
   }, [navigate]);
@@ -151,7 +160,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* 시스템 상태 헤더 & 등록 폼 */}
+      {/* 헤더 */}
       <header style={{ padding: '20px 50px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
         <form onSubmit={handleAddProject} style={{ display: 'flex', gap: '10px' }}>
           <input
@@ -164,13 +173,12 @@ const Dashboard = () => {
           />
           <button type="submit" style={btnStyle('#00d4ff')}>ADD PROJECT</button>
         </form>
-
         <div style={{ color: monitorData.status === 200 ? '#00ff88' : '#ff4444', fontSize: '0.8rem', fontWeight: 'bold' }}>
           ● {monitorData.status === 200 ? 'SYSTEM STABLE' : 'CRITICAL ALERT'}
         </div>
       </header>
 
-      {/* 3D 모델 영역 */}
+      {/* 3D 영역 */}
       <section style={{ flex: 1.2, position: 'relative' }}>
         <Canvas camera={{ position: [0, 0, 8], fov: 35 }}>
           <gridHelper args={[30, 60, '#004466', '#050505']} position={[0, -2.51, 0]} />
@@ -184,9 +192,9 @@ const Dashboard = () => {
         </Canvas>
       </section>
 
-      {/* 하단 프로젝트 리스트 콘솔 */}
+      {/* 하단 리스트 */}
       <footer style={footerStyle}>
-        <h2 style={{ fontSize: '0.8rem', color: '#999', marginBottom: '20px' }}>PROJECT CONSOLE</h2>
+        <h2 style={{ fontSize: '0.8rem', color: '#999', marginBottom: '20px' }}>PROJECT CONSOLE <span style={{fontSize: '0.6rem', marginLeft: '10px'}}>(행을 클릭하여 AI 분석 실행)</span></h2>
         <div style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '10px' }}>
           <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 10px' }}>
             <tbody>
@@ -194,21 +202,28 @@ const Dashboard = () => {
                 <tr><td style={{color: '#666', fontSize: '0.8rem'}}>등록된 프로젝트가 없습니다.</td></tr>
               ) : (
                 projects.map((project) => (
-                  <tr key={project.id} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
-                    <td style={{ padding: '15px 20px', color: '#fff', fontSize: '0.9rem' }}> # {project.id} </td>
+                  <tr
+                    key={project.id}
+                    onClick={() => handleProjectClick(project)} // 행 클릭 이벤트
+                    style={{
+                      background: selectedProjectId === project.id ? 'rgba(0, 212, 255, 0.1)' : 'rgba(255,255,255,0.02)',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: '0.2s'
+                    }}
+                  >
+                    <td style={{ padding: '15px 20px', color: '#00d4ff', fontSize: '0.9rem', fontWeight: 'bold' }}> # {project.id} </td>
                     <td style={{ padding: '15px 20px', color: '#fff', fontSize: '0.9rem' }}>
                       {project.name}
                       <div style={{ fontSize: '0.7rem', color: '#555' }}>{project.url}</div>
                     </td>
-                    {/* 상태 코드를 숫자로 명확하게 표시 */}
                     <td style={{ color: project.lastStatus === 200 ? '#00ff88' : '#ff4444', fontSize: '0.8rem', fontWeight: 'bold', width: '80px' }}>
                        {project.lastStatus === 0 ? '---' : project.lastStatus}
                     </td>
-                    {/* 개별 프로젝트 제어 버튼 추가 (START / STOP / REMOVE) */}
                     <td style={{ textAlign: 'right', paddingRight: '20px' }}>
-                      <button onClick={() => handleToggleService(project.id, 'start')} disabled={loading} style={btnStyle('#00ff88')}>START</button>
-                      <button onClick={() => handleToggleService(project.id, 'stop')} disabled={loading} style={btnStyle('#ffbb00')}>STOP</button>
-                      <button onClick={() => handleDelete(project.id)} style={btnStyle('#ff4444')}>REMOVE</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleToggleService(project.id, 'start'); }} disabled={loading} style={btnStyle('#00ff88')}>START</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleToggleService(project.id, 'stop'); }} disabled={loading} style={btnStyle('#ffbb00')}>STOP</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }} style={btnStyle('#ff4444')}>REMOVE</button>
                     </td>
                   </tr>
                 ))
