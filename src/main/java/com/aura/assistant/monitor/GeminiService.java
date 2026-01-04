@@ -36,6 +36,9 @@ public class GeminiService {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(url, requestBody, Map.class);
             return extractText(response);
+        } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
+            // [추가] 429 에러 전용 처리
+            return "AI 사용량이 초과되었습니다. 잠시 후 다시 시도해 주세요.";
         } catch (Exception e) {
             return "AI 분석 일시 불가: " + e.getMessage();
         }

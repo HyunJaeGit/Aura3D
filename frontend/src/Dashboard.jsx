@@ -145,7 +145,7 @@ const Dashboard = () => {
     }
     fetchGreeting();
     fetchProjects();
-    const timer = setInterval(fetchProjects, 10000);
+    const timer = setInterval(fetchProjects, 60000);
     return () => clearInterval(timer);
   }, [navigate]);
 
