@@ -135,4 +135,17 @@ public class MonitoringService {
     }
 
 
+     // 클릭한 특정 서버의 상태를 Gemini가 정밀 분석
+     public String getAiAnalysis(int statusCode, String projectName) {
+         // 1. 서버 이름과 상태 코드를 포함한 정밀한 질문(프롬프트) 생성
+         String prompt = String.format(
+                 "IT 전문가 비서 아우라로서 조언해줘. 현재 '%s' 서버의 상태 코드는 %d야. " +
+                         "이 상태가 의미하는 바와 관리자가 취해야 할 조치를 딱 1-2문장으로 전문적으로 말해줘.",
+                 projectName, statusCode
+         );
+
+         // 2. [중요] geminiService의 공통 메서드인 getCompletion을 호출해야
+         // 위에서 만든 커스텀 질문이 Gemini에게 전달됩니다.
+         return geminiService.getCompletion(prompt);
+     }
 }

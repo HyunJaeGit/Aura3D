@@ -1,6 +1,8 @@
 package com.aura.assistant.monitor;
 
 import com.aura.assistant.domain.MonitoringHistory;
+import com.aura.assistant.domain.TargetProject;
+import com.aura.assistant.domain.TargetProjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +22,9 @@ public class MonitorController {
 
     private final MonitoringService monitoringService;
     private final GeminiService geminiService; // GeminiService 주입 추가
+    private final TargetProjectRepository targetProjectRepository;
 
-    /**
-     * [추가] 대시보드 첫 진입 시 AI 환영 인사를 가져옵니다.
-     */
+    // [추가] 대시보드 첫 진입 시 AI 환영 인사를 가져옵니다.
     @GetMapping("/welcome")
     public ResponseEntity<String> getWelcome(@RequestParam("userName") String userName) {
         // GeminiService를 직접 호출하여 실시간 인사말을 생성합니다.
@@ -72,4 +73,17 @@ public class MonitorController {
 
         return ResponseEntity.ok(response);
     }
+
+    // 클릭 시 개별 분석 API
+    @GetMapping("/analyze")
+    public ResponseEntity<String> analyzeProject(@RequestParam("projectId") Long projectId) {
+        // targetProjectRepository를 통해 DB 조회
+        TargetProject project = targetProjectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("프로젝트를 찾을 수 없습니다."));
+
+        // 분석 결과 반환
+        String analysis = monitoringService.getAiAnalysis(project.getLastStatus(), project.getName());
+        return ResponseEntity.ok(analysis);
+    }
+
 }

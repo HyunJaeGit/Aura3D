@@ -20,8 +20,27 @@ public class GeminiService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
-     * [추가] 사용자가 대시보드에 처음 진입했을 때 보여줄 환영 인사를 생성합니다.
+     * 공통 메서드
+     * 역할: 외부(Service)에서 만든 프롬프트를 Gemini에게 전달하고 답변을 받습니다.
+     * MonitoringService의 getAiAnalysis에서 이 메서드를 호출하게 됩니다.
      */
+    public String getCompletion(String prompt) {
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+
+        Map<String, Object> requestBody = Map.of(
+                "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt))))
+        );
+
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = restTemplate.postForObject(url, requestBody, Map.class);
+            return extractText(response);
+        } catch (Exception e) {
+            return "AI 분석 일시 불가: " + e.getMessage();
+        }
+    }
+
+     // 사용자가 대시보드에 처음 진입했을 때 보여줄 환영 인사를 생성합니다.
     public String getWelcomeGreeting(String userName) {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 

@@ -9,5 +9,10 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface TargetProjectRepository extends JpaRepository<TargetProject, Long> {
-    // 기본적으로 저장(save), 조회(findById) 기능을 제공합니다.
+
+    /**
+     * URL 중복 여부를 확인하는 메서드
+     * 이 메서드 이름만 선언하면 Spring Data JPA가 자동으로 "SELECT count(*) > 0 FROM target_project WHERE url = ?" 쿼리를 실행
+     */
+    boolean existsByUrl(String url);
 }
