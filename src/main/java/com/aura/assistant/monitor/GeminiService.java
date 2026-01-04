@@ -25,7 +25,8 @@ public class GeminiService {
      * MonitoringService의 getAiAnalysis에서 이 메서드를 호출하게 됩니다.
      */
     public String getCompletion(String prompt) {
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+        // 모델명 앞에 'models/'를 추가하고 v1 버전을 사용합니다.
+        String url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 
         Map<String, Object> requestBody = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt))))
@@ -42,7 +43,7 @@ public class GeminiService {
 
      // 사용자가 대시보드에 처음 진입했을 때 보여줄 환영 인사를 생성합니다.
     public String getWelcomeGreeting(String userName) {
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+        String url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 
         // 프롬프트에 'userName'을 넣어 개인화된 느낌을 줍니다.
         String prompt = String.format(
@@ -65,7 +66,7 @@ public class GeminiService {
 
 
     public String getAiGuide(int statusCode) {
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+        String url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 
         // [기획 반영] 상태별 맞춤 프롬프트 설정
         String prompt = (statusCode == 200)
