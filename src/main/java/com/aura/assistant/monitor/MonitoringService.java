@@ -145,7 +145,7 @@ public class MonitoringService {
          );
 
          // 2. [중요] geminiService의 공통 메서드인 getCompletion을 호출해야
-         // 위에서 만든 커스텀 질문이 Gemini에게 전달됩니다.
+         // 위에서 만든 커스텀 질문이 Gemini에게 전달
          return geminiService.getCompletion(prompt);
      }
 }
