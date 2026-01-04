@@ -2,6 +2,7 @@ package com.aura.assistant.global.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
@@ -13,20 +14,26 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    // 포트폴리오용 비밀키 (실무에서는 환경변수나 설정파일로 관리해야 합니다)
-    private final String secretKey = "Aura3DSystemMonitoringSecretKeyForJwtTokenGeneration";
-    private final Key key = Keys.hmacShaKeyFor(secretKey.getBytes());
+    private final Key key;
+    private final long tokenValidityInMilliseconds;
 
-    // 토큰 유효시간: 24시간
-    private final long tokenValidityInMilliseconds = 1000L * 60 * 60 * 24;
+    // 생성자를 통해 application.yml의 값을 주입받습니다.
+    public JwtTokenProvider(
+            @Value("${jwt.secret}") String secretKey,
+            @Value("${jwt.token-validity-in-seconds}") long tokenValidityInSeconds) {
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+        // 초 단위를 밀리초(ms) 단위로 변환 (3600 -> 3,600,000)
+        this.tokenValidityInMilliseconds = tokenValidityInSeconds * 1000;
+    }
 
     /**
      * [createToken]
      * 사용자 이메일과 권한을 받아 JWT 토큰을 생성합니다.
+     * 이제 1시간(3600초) 후에 만료됩니다.
      */
     public String createToken(String email, String role) {
         Claims claims = Jwts.claims().setSubject(email);
-        claims.put("role", role); // 토큰에 사용자 권한 정보 포함
+        claims.put("role", role);
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + tokenValidityInMilliseconds);
@@ -37,6 +44,14 @@ public class JwtTokenProvider {
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    /**
+     * [getExpirationTime]
+     * 추가: 외부(Controller)에서 토큰의 만료 시각을 알 수 있도록 계산해주는 로직
+     */
+    public long getExpirationTime() {
+        return System.currentTimeMillis() + tokenValidityInMilliseconds;
     }
 
     /**

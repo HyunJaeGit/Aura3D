@@ -8,28 +8,33 @@ const Login = () => {
     const navigate = useNavigate();
 
 const handleLogin = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await axios.post('/api/user/login', { email, password });
+    e.preventDefault();
+    try {
+        const response = await axios.post('/api/user/login', { email, password });
 
-            // 1. 서버가 보낸 객체 데이터 구조 분해 할당
-            const { token, name, role } = response.data;
+        // 백엔드에서 넘어온 전체 데이터를 로그로 찍어보세요. (F12 Console 탭 확인)
+        console.log("로그인 응답 상세:", response.data);
 
-            // 2. 브라우저 로컬 스토리지에 저장 (나중에 대시보드에서 쓰기 위함)
-            localStorage.setItem('token', token);
-            localStorage.setItem('userName', name);
-            localStorage.setItem('userRole', role);
+        const { token, name, role, expiresAt } = response.data;
 
-            // 3. 알림창에 객체가 아닌 '이름'이 나오도록 수정
-            alert(`${name}님, 환영합니다!`);
+        localStorage.setItem('token', token);
+        localStorage.setItem('userName', name);
+        localStorage.setItem('userRole', role);
 
-            // 4. 대시보드로 이동
-            window.location.href = '/dashboard';
-        } catch (error) {
-            console.error('로그인 에러:', error);
-            alert('로그인에 실패했습니다. 정보를 확인하세요.');
+        // 숫자가 올바르게 들어왔을 때만 저장합니다.
+        if (expiresAt) {
+            localStorage.setItem('expiresAt', String(expiresAt));
+        } else {
+            console.error("만료 시각(expiresAt) 데이터가 응답에 포함되지 않았습니다.");
         }
-    };
+
+        alert(`${name}님, 환영합니다!`);
+        window.location.href = '/dashboard';
+    } catch (error) {
+        console.error('로그인 에러:', error);
+        alert('로그인에 실패했습니다. 정보를 확인하세요.');
+    }
+};
 
     return (
         <div style={{ padding: '100px 50px', maxWidth: '400px', margin: '0 auto', color: '#fff' }}>

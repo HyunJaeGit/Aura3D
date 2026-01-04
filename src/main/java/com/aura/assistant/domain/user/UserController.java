@@ -54,6 +54,9 @@ public class UserController {
         responseData.put("token", token);
         responseData.put("name", user.getName());
         responseData.put("role", user.getRole());
+
+        // 리액트 헤더의 카운트다운을 위해 현재 시각 + 1시간 값을 전달
+        responseData.put("expiresAt", jwtTokenProvider.getExpirationTime());
         responseData.put("message", "로그인에 성공하였습니다.");
 
         return ResponseEntity.ok(responseData);
