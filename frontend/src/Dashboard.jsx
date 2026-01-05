@@ -6,6 +6,7 @@ import axios from 'axios';
 
 /**
  * [AuraModel 컴포넌트]
+ * 역할: 시스템 상태(200/500)에 따라 모델 파일과 애니메이션을 교체합니다.
  */
 function AuraModel({ status }) {
   const group = useRef();
@@ -42,110 +43,139 @@ const Dashboard = () => {
   const [newProject, setNewProject] = useState({ name: '', url: '' });
   const [monitorData, setMonitorData] = useState({ status: 200, aiGuide: "" });
   const [loading, setLoading] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState(null); // 추가: 선택된 프로젝트 관리
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
   const userName = localStorage.getItem('userName') || '관리자';
 
-  /**
-   * [1. 데이터 로드: 프로젝트 목록]
-   */
-  const fetchProjects = async () => {
-    try {
-      const response = await axios.get('/api/projects/list');
-      setProjects(response.data);
-      const hasError = response.data.some(p => p.lastStatus !== 200 && p.lastStatus !== 0);
-      setMonitorData(prev => ({ ...prev, status: hasError ? 500 : 200 }));
-    } catch (error) {
-      console.error("목록 로드 실패:", error);
-    }
-  };
+  // --- [중복 호출 방지용 Ref] ---
+  const prevStatusRef = useRef(200); // 이전 시스템 상태 저장
+  const hasGreetedRef = useRef(false); // 인사말 실행 여부 저장
 
   /**
-   * [2. AI 인사말 로드]
+   * [1. 데이터 로드: 프로젝트 목록 및 상태 변화 감지]
+   */
+const fetchProjects = async () => {
+  try {
+    const response = await axios.get('/api/projects/list');
+    const currentProjects = response.data;
+    setProjects(currentProjects);
+
+    const hasError = currentProjects.some(p => p.lastStatus !== 200 && p.lastStatus !== 0);
+    const currentStatus = hasError ? 500 : 200;
+
+    // 1. 시스템 상태 변화 감지 및 AI 분석 호출
+    if (prevStatusRef.current !== currentStatus) {
+      // [최적화] 사용자가 특정 프로젝트를 클릭해서 '상세 분석'을 보고 있는 중이 아닐 때만 전체 상태 분석 호출
+      if (!selectedProjectId) {
+        fetchAiAnalysisByStatus(currentStatus);
+      }
+      prevStatusRef.current = currentStatus;
+    }
+
+    // 2. [핵심 수정] monitorData 업데이트 시 기존 aiGuide를 보존합니다.
+    setMonitorData(prev => ({
+      ...prev,
+      status: currentStatus,
+      aiGuide: prev.aiGuide // 기존에 떠있던 인사말이나 분석 결과를 유지함
+    }));
+
+  } catch (error) {
+    console.error("목록 로드 실패:", error);
+  }
+};
+
+  /**
+   * [2. AI 인사말 로드 - 최초 1회만 실행]
    */
   const fetchGreeting = async () => {
+    if (hasGreetedRef.current) return; // 이미 인사를 했다면 실행하지 않음
     try {
       const response = await axios.get(`/api/monitoring/welcome?userName=${userName}`);
       setMonitorData(prev => ({ ...prev, aiGuide: response.data }));
+      hasGreetedRef.current = true; // 인사 완료 표시
     } catch (error) {
       console.error("인사말 로드 실패:", error);
     }
   };
 
   /**
-   * [추가 기능: 특정 프로젝트 AI 분석 가이드 요청]
+   * [3. 상태 변화에 따른 시스템 전체 AI 분석]
    */
-  const handleProjectClick = async (project) => {
-    setSelectedProjectId(project.id);
+  const fetchAiAnalysisByStatus = async (status) => {
     try {
-      // 백엔드의 새로운 분석 엔드포인트 호출
-      const response = await axios.get(`/api/monitoring/analyze?projectId=${project.id}`);
+      // 백엔드에 statusCode를 보내 적절한 가이드를 요청합니다.
+      const response = await axios.get(`/api/monitoring/analyze_status?statusCode=${status}`);
       setMonitorData(prev => ({ ...prev, aiGuide: response.data }));
     } catch (error) {
-      console.error("분석 실패:", error);
-      setMonitorData(prev => ({ ...prev, aiGuide: "분석 데이터를 가져오지 못했습니다." }));
+      console.error("상태 분석 실패:", error);
     }
   };
 
   /**
-   * [3. 신규 프로젝트 등록]
+   * [4. 특정 프로젝트 클릭, 해제 시 상세 AI 분석]
    */
+const handleProjectClick = async (project) => {
+  // 1. 이미 선택된 행을 다시 클릭했는지 확인
+  if (selectedProjectId === project.id) {
+    console.log("선택 해제: 시스템 전체 분석 상태로 복구");
+    setSelectedProjectId(null); // 선택 해제
+
+    // 선택이 해제되면 다시 시스템 전체 상태에 맞는 가이드를 보여줌
+    fetchAiAnalysisByStatus(monitorData.status);
+    return; // 함수 종료
+  }
+
+  // 2. 새로운 행을 클릭했을 경우 (기존 로직)
+  setSelectedProjectId(project.id);
+  try {
+    const response = await axios.get(`/api/monitoring/analyze?projectId=${project.id}`);
+    setMonitorData(prev => ({ ...prev, aiGuide: response.data }));
+  } catch (error) {
+    console.error("분석 실패:", error);
+    setMonitorData(prev => ({ ...prev, aiGuide: "해당 프로젝트를 분석할 수 없습니다." }));
+  }
+};
+
+  // --- [핸들러: 등록, 제어, 삭제] ---
   const handleAddProject = async (e) => {
     e.preventDefault();
-    if (!newProject.name || !newProject.url) {
-      alert("이름과 URL을 모두 입력해주세요.");
-      return;
-    }
+    if (!newProject.name || !newProject.url) return;
     try {
       await axios.post('/api/projects/add', newProject);
-      alert("성공적으로 등록되었습니다!");
       setNewProject({ name: '', url: '' });
       fetchProjects();
-    } catch (error) {
-      alert(error.response?.data?.message || "등록에 실패했습니다.");
-    }
+    } catch (error) { alert("등록 실패"); }
   };
 
-  /**
-   * [4. 감시 제어]
-   */
   const handleToggleService = async (id, action) => {
     setLoading(true);
     try {
-      const res = await axios.post(`/api/monitoring/${action}?projectId=${id}`);
-      if (res.status === 200) {
-        alert(`프로젝트 #${id} 감시를 ${action === 'start' ? '시작' : '중단'}합니다.`);
-        fetchProjects();
-      }
-    } catch (err) {
-      console.error("제어 실패:", err);
-    } finally {
-      setLoading(false);
-    }
+      await axios.post(`/api/monitoring/${action}?projectId=${id}`);
+      fetchProjects();
+    } finally { setLoading(false); }
   };
 
-  /**
-   * [5. 프로젝트 삭제]
-   */
   const handleDelete = async (id) => {
     if (!window.confirm("정말 삭제하시겠습니까?")) return;
     try {
       await axios.delete(`/api/projects/${id}`);
       fetchProjects();
-    } catch (error) {
-      alert("삭제 실패");
-    }
+    } catch (error) { alert("삭제 실패"); }
   };
 
+  /**
+   * [메인 이펙트: 초기 로드 및 타이머 설정]
+   */
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      alert("로그인이 필요합니다.");
       navigate('/login');
       return;
     }
-    fetchGreeting();
-    fetchProjects();
-    const timer = setInterval(fetchProjects, 60000);
+
+    fetchGreeting(); // 최초 1회 인사
+    fetchProjects(); // 초기 데이터 로드
+
+    const timer = setInterval(fetchProjects, 60000); // 1분 간격 갱신
     return () => clearInterval(timer);
   }, [navigate]);
 
@@ -160,17 +190,11 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* 헤더 */}
+      {/* 헤더 및 시스템 상태 표시 */}
       <header style={{ padding: '20px 50px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
         <form onSubmit={handleAddProject} style={{ display: 'flex', gap: '10px' }}>
-          <input
-            style={inputStyle} placeholder="프로젝트 명"
-            value={newProject.name} onChange={e => setNewProject({...newProject, name: e.target.value})}
-          />
-          <input
-            style={inputStyle} placeholder="URL (https://...)"
-            value={newProject.url} onChange={e => setNewProject({...newProject, url: e.target.value})}
-          />
+          <input style={inputStyle} placeholder="프로젝트 명" value={newProject.name} onChange={e => setNewProject({...newProject, name: e.target.value})} />
+          <input style={inputStyle} placeholder="URL (https://...)" value={newProject.url} onChange={e => setNewProject({...newProject, url: e.target.value})} />
           <button type="submit" style={btnStyle('#00d4ff')}>ADD PROJECT</button>
         </form>
         <div style={{ color: monitorData.status === 200 ? '#00ff88' : '#ff4444', fontSize: '0.8rem', fontWeight: 'bold' }}>
@@ -178,7 +202,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* 3D 영역 */}
+      {/* 3D 모델 캔버스 영역 */}
       <section style={{ flex: 1.2, position: 'relative' }}>
         <Canvas camera={{ position: [0, 0, 8], fov: 35 }}>
           <gridHelper args={[30, 60, '#004466', '#050505']} position={[0, -2.51, 0]} />
@@ -192,7 +216,7 @@ const Dashboard = () => {
         </Canvas>
       </section>
 
-      {/* 하단 리스트 */}
+      {/* 하단 프로젝트 리스트 콘솔 */}
       <footer style={footerStyle}>
         <h2 style={{ fontSize: '0.8rem', color: '#999', marginBottom: '20px' }}>PROJECT CONSOLE <span style={{fontSize: '0.6rem', marginLeft: '10px'}}>(행을 클릭하여 AI 분석 실행)</span></h2>
         <div style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '10px' }}>
@@ -204,12 +228,10 @@ const Dashboard = () => {
                 projects.map((project) => (
                   <tr
                     key={project.id}
-                    onClick={() => handleProjectClick(project)} // 행 클릭 이벤트
+                    onClick={() => handleProjectClick(project)}
                     style={{
                       background: selectedProjectId === project.id ? 'rgba(0, 212, 255, 0.1)' : 'rgba(255,255,255,0.02)',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      transition: '0.2s'
+                      borderRadius: '8px', cursor: 'pointer', transition: '0.2s'
                     }}
                   >
                     <td style={{ padding: '15px 20px', color: '#00d4ff', fontSize: '0.9rem', fontWeight: 'bold' }}> # {project.id} </td>
@@ -236,41 +258,12 @@ const Dashboard = () => {
   );
 };
 
-// --- [스타일 설정] ---
-const containerStyle = {
-    width: '100%', maxWidth: '1000px', height: '90vh', margin: '20px auto',
-    position: 'relative', display: 'flex', flexDirection: 'column',
-    boxShadow: '0 0 100px rgba(0,0,0,0.8)', backgroundImage: "url('/images/bg.png')",
-    backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#0a0a0b',
-    borderRadius: '8px', overflow: 'hidden'
-};
-
-const footerStyle = {
-    flex: 0.8, padding: '30px 50px', background: 'rgba(5, 5, 5, 0.85)',
-    backdropFilter: 'blur(10px)', borderTop: '1px solid rgba(255,255,255,0.05)', zIndex: 10
-};
-
-const inputStyle = {
-    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-    color: '#fff', padding: '8px 12px', borderRadius: '4px', fontSize: '0.75rem', outline: 'none'
-};
-
-const btnStyle = (color) => ({
-    background: 'none', color: color, border: `1px solid ${color}`,
-    padding: '5px 12px', borderRadius: '4px', cursor: 'pointer',
-    fontSize: '0.65rem', fontWeight: 'bold', marginLeft: '5px', transition: '0.2s'
-});
-
-const bubbleStyle = {
-    position: 'absolute', top: '100px', right: '60px', width: '260px', padding: '20px',
-    background: 'rgba(15, 15, 20, 0.95)', border: '1px solid rgba(0, 212, 255, 0.4)',
-    borderRadius: '15px', zIndex: 100, backdropFilter: 'blur(8px)'
-};
-
-const bubbleTailStyle = {
-    position: 'absolute', left: '-10px', top: '30px',
-    borderTop: '10px solid transparent', borderBottom: '10px solid transparent',
-    borderRight: '10px solid rgba(0, 212, 255, 0.4)'
-};
+// --- [스타일 설정 생략: 기존과 동일] ---
+const containerStyle = { width: '100%', maxWidth: '1000px', height: '90vh', margin: '20px auto', position: 'relative', display: 'flex', flexDirection: 'column', boxShadow: '0 0 100px rgba(0,0,0,0.8)', backgroundImage: "url('/images/bg.png')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#0a0a0b', borderRadius: '8px', overflow: 'hidden' };
+const footerStyle = { flex: 0.8, padding: '30px 50px', background: 'rgba(5, 5, 5, 0.85)', backdropFilter: 'blur(10px)', borderTop: '1px solid rgba(255,255,255,0.05)', zIndex: 10 };
+const inputStyle = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '8px 12px', borderRadius: '4px', fontSize: '0.75rem', outline: 'none' };
+const btnStyle = (color) => ({ background: 'none', color: color, border: `1px solid ${color}`, padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 'bold', marginLeft: '5px', transition: '0.2s' });
+const bubbleStyle = { position: 'absolute', top: '100px', right: '60px', width: '260px', padding: '20px', background: 'rgba(15, 15, 20, 0.95)', border: '1px solid rgba(0, 212, 255, 0.4)', borderRadius: '15px', zIndex: 100, backdropFilter: 'blur(8px)' };
+const bubbleTailStyle = { position: 'absolute', left: '-10px', top: '30px', borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderRight: '10px solid rgba(0, 212, 255, 0.4)' };
 
 export default Dashboard;
