@@ -83,6 +83,3 @@ public void checkServerStatus(TargetProject project) {
 * **성능 최적화**: **Virtual Threads** 도입으로 대규모 요청 시에도 안정적인 메모리 유지
 * **직관적 UX**: 텍스트 위주의 로그 시스템을 **3D 캐릭터 모션**으로 변환하여 인지 편의성 강화
 
-*/
-
-**이 버전으로 깃허브 리드미를 교체해 드릴까요? 아니면 더 수정하고 싶은 문구가 있으신가요?**
